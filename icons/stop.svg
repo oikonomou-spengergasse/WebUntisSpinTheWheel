@@ -1,0 +1,14 @@
+<svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 100 100"
+        width="100"
+        height="100"
+        fill="currentColor"
+>
+    <!-- Outer Rounded Stop Sign Shape -->
+    <rect x="10" y="10" width="80" height="80" rx="15" ry="15" stroke="black" stroke-width="3" fill="red"/>
+
+    <!-- Bold Stop 'X' Symbol -->
+    <line x1="30" y1="30" x2="70" y2="70" stroke="white" stroke-width="5"/>
+    <line x1="70" y1="30" x2="30" y2="70" stroke="white" stroke-width="5"/>
+</svg>
