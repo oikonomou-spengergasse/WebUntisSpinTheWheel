@@ -1,23 +1,23 @@
 {
   "manifest_version": 2,
-  "name": "My Cross-Browser Extension",
+  "name": "WebUntis SpinTheWheel",
   "version": "1.0",
-  "description": "A browser extension for Chrome & Firefox",
+  "description": "A SpinTheWheel extension for WebUntis",
   "background": {
     "scripts": ["background.js"],
     "persistent": false
   },
   "browser_action": {
-    "default_popup": "popup.html",
+    //"default_popup": "popup.html",
     "default_icon": "icons/icon.png"
   },
-  "permissions": [
-    "tabs",
-    "storage"
-  ],
+  //"permissions": [
+    //"tabs"//,
+    //"storage"
+  //],
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": ["https://*.webuntis.com/*"], //["<all_urls>"],
       "js": ["content.js"]
     }
   ],
