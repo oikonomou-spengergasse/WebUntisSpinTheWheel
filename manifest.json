@@ -11,10 +11,10 @@
     //"default_popup": "popup.html",
     "default_icon": "icons/icon.png"
   },
-  //"permissions": [
+  "permissions": [
     //"tabs"//,
-    //"storage"
-  //],
+    "storage"
+  ],
   "content_scripts": [
     {
       "matches": ["https://*.webuntis.com/*"], //["<all_urls>"],

@@ -1,6 +1,7 @@
 console.log("Content script loaded on", window.location.href);
 //const untisColor = "#fe6033"
-const runtime = (chrome || browser).runtime;
+const browserApi = (chrome || browser)
+const runtime = browserApi.runtime;
 const id = "WheelButtons"
 
 function sleep(time) {
@@ -12,13 +13,12 @@ function durationForIndex(numElems, index, offsetDuration = 100, maxDuration = 1
     return offsetDuration + (maxDuration * (Math.pow(Math.E, 0.27 * index) / Math.pow(Math.E, 0.27 * numElems)))
 }
 
-function initExtensionFunctionality(document, studentNodes, menuNode) {
+function initExtensionFunctionality(document, studentNodes, menuNode, classRoomName) {
 
-    let spinning     = false;
-    const students    = [...studentNodes].map(extractStudent);
-    let participating = students;
-    const spinButton          = document.createElement("button");
-    const resetButton         = document.createElement("button");
+    let spinning = false;
+    const students = [...studentNodes].map(extractStudent);
+    const spinButton = document.createElement("button");
+    const resetButton = document.createElement("button");
 
     function toggleButtons(spinButton, resetButton) {
         const isSpin = spinButton.style.display === "inline-block";
@@ -33,7 +33,7 @@ function initExtensionFunctionality(document, studentNodes, menuNode) {
 
     async function highlightElem(elem, durationMillis, isChosen) {
         elem.ref.style.transition = `transform ${durationMillis}ms ease, z-index 0s`; // Smooth transition for transform
-        elem.ref.style.position = "relative";
+        //elem.ref.style.position = "relative";
         elem.ref.style.zIndex = "9999";
         elem.ref.style.transform = "scale(1.5)";
 
@@ -58,7 +58,7 @@ function initExtensionFunctionality(document, studentNodes, menuNode) {
                 const duration = durationForIndex(allElems.length, i);
                 const isChosen = i === allElems.length - 1;
                 await highlightElem(allElems[i], duration, isChosen);
-                if (isChosen) elems[chosenElemIndex].previouslySelected = true;
+                if (isChosen) await elems[chosenElemIndex].setChosen();
             }
             spinning = false;
         }
@@ -74,24 +74,73 @@ function initExtensionFunctionality(document, studentNodes, menuNode) {
 
         async function restoreStyles(durationMillis) {
             elem.style.transform = style.transform;
-            elem.style.position = style.position;
+            //elem.style.position = style.position;
             if (durationMillis !== 0) await sleep(durationMillis)
             elem.style.transition = style.transition;
             elem.style.zIndex = style.zIndex;
         }
 
+        //TODO: calculate real key/id!!
+        const key = `${classRoomName}-${elem.id}`;
+        const checkbox = document.createElement("input")
+
+        async function wasPreviouslySelected() {
+            const res = await browserApi.storage.local.get({[key]: false});
+            return res[key];
+        }
+
+        async function setSelected() {
+            await browserApi.storage.local.set({[key]: true});
+            checkbox.checked = true;
+        }
+
+        async function unsetSelected() {
+            await browserApi.storage.local.remove([key]);
+            checkbox.checked = false;
+        }
+
+        wasPreviouslySelected().then((wasSelected) => {
+            if (wasSelected) {
+                checkbox.checked = true;
+            }
+        })
+
+        function initCheckbox() {
+            checkbox.type = "checkbox"
+            checkbox.style.width = "15px";
+            checkbox.style.height = "15px";
+            checkbox.style.top = "0";
+            checkbox.style.right = "0";
+            checkbox.style.position = "absolute";
+            checkbox.onclick = async () => checkbox.checked ? await setSelected() : await unsetSelected();
+            elem.appendChild(checkbox);
+            elem.style.position = "relative";
+        }
+        function isPresent(){
+            return elem.querySelector(".icon-cr-status-absent") === null
+        }
+
+        if (isPresent()) initCheckbox()
+        
         const obj = {
             ref: elem,
-            previouslySelected: false,
-            participating: () => elem.querySelector(".icon-cr-status-absent") === null && !obj.previouslySelected,
+            participating: async () => isPresent() && !await wasPreviouslySelected(),
+            setChosen: setSelected,
             restoreStyles: restoreStyles
         }
         return obj;
     }
 
     async function chooseStudentAndSpin() {
-        if (participating.length > 0) {
-            participating = participating.filter(e => e.participating())
+        if (students.length > 0) {
+
+            let participating = []
+            for (const student of students) {
+                if (await student.participating()) {
+                    participating.push(student)
+                }
+            }
+
             const chosenNum = Math.floor(Math.random() * participating.length);
             toggleButtons(spinButton, resetButton);
             await spin(participating, chosenNum);
@@ -124,6 +173,11 @@ function initExtensionFunctionality(document, studentNodes, menuNode) {
     console.log("buttons created");
 }
 
+function extractClassroomName(document) {
+    //quick-n-dirty way to find classroom name
+    return document.querySelectorAll(".pipe-separator")[1].children[0].textContent
+}
+
 new MutationObserver(() => {
     const iframe = document.querySelector("#wu-page-iframe");
     if (iframe) {
@@ -136,7 +190,8 @@ new MutationObserver(() => {
 
                 if (studentNodes.length > 0 && menuNode && !menuNode.querySelector(`#${id}`)) {
                     console.log("init app")
-                    initExtensionFunctionality(iframeDoc, studentNodes, menuNode);
+                    const name = extractClassroomName(document)
+                    initExtensionFunctionality(iframeDoc, studentNodes, menuNode, name);
                     iframeObserver.disconnect();
                 }
             })
